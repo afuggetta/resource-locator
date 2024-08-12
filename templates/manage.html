@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Projects & Resources</title>
+</head>
+<body>
+
+<h1>Manage Projects & Resources</h1>
+<a href="/">Back to Project Overview</a>
+
+<h2>Add Project</h2>
+<form id="add-project-form">
+    <input type="text" id="project-name" placeholder="Project Name" required>
+    <button type="submit">Add Project</button>
+</form>
+
+<h2>Add Resource</h2>
+<form id="add-resource-form">
+    <input type="text" id="resource-name" placeholder="Resource Name" required>
+    <select id="project-select">
+        <option value="">Select Project</option>
+        {% for project in projects %}
+            <option value="{{ project.id }}">{{ project.name }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit">Add Resource</button>
+</form>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // Add project
+        $('#add-project-form').on('submit', function(e) {
+            e.preventDefault();
+            var projectName = $('#project-name').val();
+            $.post('/add_project', { name: projectName }, function(response) {
+                if (response.status === 'success') {
+                    alert('Project added successfully!');
+                    location.reload(); // Reload to update the project list
+                } else {
+                    alert('Failed to add project.');
+                }
+            });
+        });
+
+        // Add resource
+        $('#add-resource-form').on('submit', function(e) {
+            e.preventDefault();
+            var resourceName = $('#resource-name').val();
+            var projectId = $('#project-select').val();
+            $.post('/add_resource', { name: resourceName, project_id: projectId }, function(response) {
+                if (response.status === 'success') {
+                    alert('Resource added successfully!');
+                    location.reload(); // Reload to update the resources list
+                } else {
+                    alert('Failed to add resource.');
+                }
+            });
+        });
+    });
+</script>
+
+</body>
+</html>

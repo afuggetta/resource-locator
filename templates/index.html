@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Resource Management</title>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <style>
+        .project {
+            width: 300px;
+            min-height: 200px;
+            margin: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            display: inline-block;
+            vertical-align: top;
+        }
+        .resource {
+            margin: 5px;
+            padding: 5px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .remove-resource {
+            margin-left: 10px;
+            cursor: pointer;
+            color: red;
+        }
+        .percentage-input {
+            width: 50px;
+            margin-right: 5px;
+        }
+        .project-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Project Resource Management</h1>
+<a href="/manage">Add Projects & Resources</a>
+
+<div id="projects">
+    {% for project in projects %}
+        <div class="project" data-project-id="{{ project.id }}">
+            <div class="project-title">
+                <h3>{{ project.name }}</h3>
+                <span class="average-percentage" id="avg-percentage-{{ project.id }}">0%</span>
+            </div>
+            <div class="resources" id="resources-{{ project.id }}">
+                {% for resource in project.resources %}
+                    <div class="resource" data-resource-id="{{ resource.id }}">
+                        <span>{{ resource.name }}</span>
+                        <input type="number" class="percentage-input" value="{{ resource.percentage }}" data-resource-id="{{ resource.id }}" min="1" max="100">
+                        <span class="remove-resource">x</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+<script>
+    $(function() {
+        function customToFixed(num, digits) {
+            // Check if the number is an integer
+            if (Number.isInteger(num)) {
+                return num.toString();
+            } else {
+                return num.toFixed(digits);
+            }
+        }
+
+        function calculateAveragePercentage() {
+            $('.project').each(function() {
+                var projectId = $(this).data('project-id');
+                var totalPercentage = 0;
+                var resourceCount = 0;
+                
+                $(this).find('.percentage-input').each(function() {
+                    var percentage = parseInt($(this).val());
+                    totalPercentage += percentage;
+                    resourceCount++;
+                });
+
+                var averagePercentage = resourceCount > 0 ? customToFixed(totalPercentage / resourceCount, 2) : 0;
+                var resourcesPerProject = customToFixed((resourceCount * averagePercentage) / 100, 2);
+                $('#avg-percentage-' + projectId).text(resourcesPerProject + ' allocated');
+            });
+        }
+
+        calculateAveragePercentage(); // Initial calculation
+
+        $(".resources").sortable({
+            connectWith: ".resources",
+            stop: function(event, ui) {
+                var resourceId = ui.item.data('resource-id');
+                var projectId = ui.item.closest('.project').data('project-id');
+                $.post('/move_resource', {
+                    resource_id: resourceId,
+                    project_id: projectId
+                }, function() {
+                    calculateAveragePercentage(); // Recalculate after moving a resource
+                });
+            }
+        }).disableSelection();
+
+        $('.remove-resource').click(function() {
+            var resourceId = $(this).closest('.resource').data('resource-id');
+            $.post('/remove_resource', {
+                resource_id: resourceId
+            }, function(response) {
+                if (response.status === 'success') {
+                    location.reload(); // Reload the page to reflect changes
+                } else {
+                    alert('Failed to remove resource.');
+                }
+            });
+        });
+
+        $('.percentage-input').on('change', function() {
+            var resourceId = $(this).data('resource-id');
+            var percentage = $(this).val();
+            $.post('/update_percentage', {
+                resource_id: resourceId,
+                percentage: percentage
+            }, function(response) {
+                if (response.status === 'success') {
+                    calculateAveragePercentage(); // Recalculate after percentage change
+                } else {
+                    alert('Failed to update percentage.');
+                }
+            });
+        });
+    });
+</script>
+
+</body>
+</html>
